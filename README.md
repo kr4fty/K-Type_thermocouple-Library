@@ -4,7 +4,7 @@ Library to handle a type K thermocouple.
 
 ## Hardware
 
-In this example an operational amplifier winning 270 to thermocouple work between 0 and 420 ° C is used. Quietly you can change the gain of the operational amplifier to work in a wider range or smaller.
+In this example an operational amplifier winning 270 to thermocouple work between 0 and 420°C is used. Quietly you can change the gain of the operational amplifier to work in a wider range or smaller.
 
 As advantages we can say that when working with this AO, LM358, we only need a simple source. It is also very economical in comparison to the dedicated circuits dedicated to this purpose, as is the case of the MAX31855.
 
