@@ -3,16 +3,12 @@
 
 kThermocouple::kThermocouple(uint8_t pin_thermocouple)
 {
-    _pin_thermocouple = pin_thermocouple;    
-    pinMode(_pin_thermocouple, INPUT);
+    _pin_thermocouple = pin_thermocouple;
     _calibrate= CALIBRATE;
-    
-    // ELiminar lecturas y fluctuaciones iniciales
-    for(int i=0; i<100; i++){
-        _adc = (uint16_t)analogRead(_pin_thermocouple);
-        _adc = (float)((X*_adcAnt + _adc)/(X+1));
-        _adcAnt = _adc;
-    }
+    analogRead(_pin_thermocouple);
+#ifndef NO_BUILTIN_LP_FILTER
+    _adcAnt = analogRead(_pin_thermocouple);
+#endif
 }
 
 float kThermocouple::_mv2temp(float mv)
@@ -74,7 +70,7 @@ float kThermocouple::_mv2temp(float mv)
     {
         for(i=0, temp=0; i<lenC; i++)
         {
-            temp = (float)(temp + c[i] * pow(mv,i));
+            temp += (float)(c[i] * pow(mv,i));
         }
     }
     else
@@ -85,32 +81,44 @@ float kThermocouple::_mv2temp(float mv)
 
 float kThermocouple::_adc2mv(uint16_t adc)
 {
-    double Vout, Vin;
-    Vout = (float)((Vcc/1024)*adc);
-    Vin = (float)((Vout/Av)*1000);
+    //double Vout, Vin;
+    //Vout = (float)((Vcc/1024)*adc);
+    //Vin = (float)((Vout/Av)*1000);
     
-    return (float)Vin;
+    //return (float)Vin;
+    return (float)(0.0180845*adc);  // (Vcc*1000)/(1024*Av) * adc
 }
-float kThermocouple::getTempDirect()
+float kThermocouple::getTemp()
 {
     float vin, temp;
-    _adc = (uint16_t)analogRead(_pin_thermocouple);
+    _adc = analogRead(_pin_thermocouple);
 
     vin = _adc2mv(_adc);
     temp = _mv2temp(vin) - _calibrate;
-    if(temp>=0) // Solo para temp > 0ºC
+    //if(temp>=0) // Solo para temp > 0ºC
       return temp;
-    else
-      return 0;
+    //else
+      //return 0;
 }
-
+#ifndef NO_BUILTIN_LP_FILTER
 float kThermocouple::getTempWithFilter()
 {
     float vin, temp;
-    _adc = (uint16_t)analogRead(_pin_thermocouple);
     
-    _adc = (float)((X*_adcAnt + _adc)/(X+1)); // Filtro digital pasa bajos
-    _adcAnt = _adc;
+    _adc = (uint16_t)analogRead(_pin_thermocouple);
+    //_adc = (float)((X*_adcAnt)/(X+1) + (_adc/(X+1))); // Filtro digital pasa bajos
+      //_adc = (_adc - _adcAnt)/(X+1)+_adcAnt;    // Otro algoritmo
+    //_adcAnt = _adc;
+
+    uint8_t Beta = 4, FP_Shift=3;
+    _adc <<= FP_Shift; // Shift to fixed point
+    _adcAnt = (_adcAnt<< Beta)-_adcAnt; 
+    _adcAnt += _adc;
+    _adcAnt >>= Beta;
+    // Don't do the following shift if you want to do further
+    // calculations in fixed-point using SmoothData
+    _adc = _adcAnt>> FP_Shift;
+    
     vin = _adc2mv(_adc);
     temp = _mv2temp(vin) - _calibrate;
     if(temp>=0) // Solo para temp > 0ºC
@@ -118,6 +126,7 @@ float kThermocouple::getTempWithFilter()
     else
       return 0;
 }
+#endif
 float kThermocouple::getCalibrate()
 {
     return _calibrate;
