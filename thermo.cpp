@@ -88,10 +88,13 @@ float kThermocouple::_adc2mv(uint16_t adc)
     //return (float)Vin;
     return (float)(0.0180845*adc);  // (Vcc*1000)/(1024*Av) * adc
 }
-float kThermocouple::getTemp()
+float kThermocouple::getTemp(uint16_t adc)
 {
     float vin, temp;
-    _adc = analogRead(_pin_thermocouple);
+    if(adc==1024)
+      _adc = analogRead(_pin_thermocouple);
+    else
+      _adc = adc;
 
     vin = _adc2mv(_adc);
     temp = _mv2temp(vin) - _calibrate;
@@ -121,12 +124,32 @@ float kThermocouple::getTempWithFilter()
     
     vin = _adc2mv(_adc);
     temp = _mv2temp(vin) - _calibrate;
-    if(temp>=0) // Solo para temp > 0ºC
+    //if(temp>=0) // Solo para temp > 0ºC
       return temp;
-    else
-      return 0;
+    //else
+      //return 0;
 }
 #endif
+uint16_t kThermocouple::tempToAdc(uint16_t temp){
+    int16_t adc, aux, sInit, sEnd;
+    float vin;
+    bool looping=true;
+    
+    sInit = 0;
+    sEnd = 1024;
+    while(looping){
+      adc = (uint16_t)(sInit+(sEnd-sInit)/2);
+      vin = _adc2mv(adc);
+      aux = (uint16_t)(_mv2temp(vin) - _calibrate);
+      if(temp==aux)
+        looping = false;
+      else if(temp<aux)
+        sEnd = adc;
+      else
+        sInit = adc;
+    }
+    return (uint16_t)adc;
+}
 float kThermocouple::getCalibrate()
 {
     return _calibrate;
